@@ -1,0 +1,42 @@
+﻿### SkillLimitExtender Default Config yaml ###
+SkillLimits:
+# 戦闘スキル
+Axes: 250
+Clubs: 250
+Knives: 250
+Spears: 250
+Swords: 250
+
+Bows: 250
+Crossbows: 250
+Pickaxes: 250
+Polearms: 250
+Unarmed: 250
+
+Blocking: 250
+Dodge: 250
+
+# 魔法スキル
+BloodMagic: 250
+ElementalMagic: 250
+
+# 移動スキル
+Run: 250
+Jump: 250
+Sneak: 250
+Swim: 250
+Ride: 250
+
+# 生産スキル
+Cooking: 250
+Crafting: 250
+Farming: 250
+Fishing: 250
+WoodCutting: 250
+
+
+CustomSkillLimits:
+### add MOD skills ###
+Magic: 250
+Firearms: 250
+Sailing: 250

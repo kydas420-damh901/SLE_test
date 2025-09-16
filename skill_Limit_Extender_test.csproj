@@ -1,0 +1,60 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net472</TargetFramework>
+		<LangVersion>latest</LangVersion>
+		<Nullable>enable</Nullable>
+		<Deterministic>true</Deterministic>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Reference Include="BepInEx">
+			<HintPath>lib\BepInEx.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="0Harmony">
+			<HintPath>lib\0Harmony.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="UnityEngine">
+			<HintPath>lib\UnityEngine.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="UnityEngine.CoreModule">
+			<HintPath>lib\UnityEngine.CoreModule.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="UnityEngine.UI">
+			<HintPath>lib\UnityEngine.UI.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="YamlDotNet">
+			<HintPath>lib\YamlDotNet.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="Assembly-CSharp">
+			<HintPath>lib\Assembly-CSharp.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="assembly_valheim">
+			<HintPath>lib\assembly_valheim.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="assembly_utils">
+			<HintPath>lib\assembly_utils.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="Jotunn">
+			<HintPath>Jotunn.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="UnityEngine.UI">
+			<HintPath>lib\UnityEngine.UI.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+	</ItemGroup>
+
+	<PropertyGroup>
+		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+		<OutputPath>E:\r2modman\Valheim\profiles\mod test\BepInEx\plugins</OutputPath>
+	</PropertyGroup>
+</Project>
