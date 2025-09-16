@@ -10,7 +10,7 @@ namespace SkillLimitExtender
     {
         internal const string PluginGuid = "SkillLimitExtender";
         internal const string PluginName = "SkillLimitExtender";
-        internal const string PluginVersion = "1.1.0";
+        internal const string PluginVersion = "1.0.0";
 
         internal new static ManualLogSource Logger { get; private set; } = null!;
         private readonly Harmony _harmony = new(PluginGuid);
