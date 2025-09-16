@@ -1,14 +1,15 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Reflection.Emit;
 using HarmonyLib;
 
 namespace SkillLimitExtender
 {
     /// <summary>
-    /// Skills.GetSkillFactor 内の「/ 100f」を「/ cap」に置換するTranspiler。
-    /// これによりスキル効果の計算係数が拡張上限に対応する。
+    /// SkillsDialog.Setup内の「/ 100f」を「/ cap」に置換するTranspiler。
+    /// より安全なアプローチで、DefaultCapのみ使用。
     /// </summary>
-    [HarmonyPatch(typeof(global::Skills), nameof(global::Skills.GetSkillFactor))]
+    [HarmonyPatch(typeof(global::SkillsDialog), nameof(global::SkillsDialog.Setup))]
     internal static class SLE_Hook_SkillsDialog_LevelBars
     {
         [HarmonyTranspiler]
@@ -16,47 +17,63 @@ namespace SkillLimitExtender
         {
             var codes = new List<CodeInstruction>(instructions);
 
-            // 必要なメソッド参照を取得
-            var mi_GetCap = AccessTools.Method(typeof(SkillConfigManager), nameof(SkillConfigManager.GetCap));
+            // DefaultCap参照を取得
+            var fi_DefaultCap = AccessTools.Field(typeof(SkillConfigManager), nameof(SkillConfigManager.DefaultCap));
+            var prop_Value = AccessTools.Property(typeof(BepInEx.Configuration.ConfigEntry<int>), "Value");
 
-            if (mi_GetCap == null)
-                return codes; // 安全策：何も置換できなければ元のILを返す
+            if (fi_DefaultCap == null || prop_Value == null)
+            {
+                SkillLimitExtenderPlugin.Logger?.LogWarning("[SLE] SkillsDialog: Cannot find DefaultCap, skipping patch");
+                return codes;
+            }
 
-            // 100fを動的なcapに置換
-            for (int i = 0; i < codes.Count; i++)
+            int replacementCount = 0;
+
+            // 安全な100f置換（SetValueの直前のみ）
+            for (int i = 0; i < codes.Count - 1; i++)
             {
                 var instr = codes[i];
+                var nextInstr = codes[i + 1];
 
-                // 「ldc.r4 100.0」を探して置換
-                if (instr.opcode == OpCodes.Ldc_R4 && instr.operand is float f && System.Math.Abs(f - 100f) < 0.0001f)
+                // 「ldc.r4 100.0」の直後に「div」があり、その後「callvirt SetValue」がある場合のみ置換
+                if (instr.opcode == OpCodes.Ldc_R4 &&
+                    instr.operand is float f &&
+                    Math.Abs(f - 100f) < 0.0001f &&
+                    nextInstr.opcode == OpCodes.Div)
                 {
-                    // 除算の文脈かどうかチェック（次の命令がdivかどうか）
-                    if (i + 1 < codes.Count && codes[i + 1].opcode == OpCodes.Div)
+                    // SetValueの呼び出しが近くにあるかチェック
+                    bool isSetValueContext = false;
+                    for (int j = i + 1; j < Math.Min(codes.Count, i + 10); j++)
                     {
-                        // 100fを動的なcapに置換
-                        // ldarg.1 (skillType パラメータ)
-                        // call int SkillConfigManager.GetCap(Skills.SkillType)
-                        // conv.r4
+                        if (codes[j].opcode == OpCodes.Callvirt &&
+                            codes[j].operand?.ToString()?.Contains("SetValue") == true)
+                        {
+                            isSetValueContext = true;
+                            break;
+                        }
+                    }
+
+                    if (isSetValueContext)
+                    {
+                        // 100fをDefaultCapに置換
                         var newSeq = new List<CodeInstruction>
                         {
-                            new CodeInstruction(OpCodes.Ldarg_1), // skillType パラメータ
-                            new CodeInstruction(OpCodes.Call, mi_GetCap),
+                            new CodeInstruction(OpCodes.Ldsfld, fi_DefaultCap),
+                            new CodeInstruction(OpCodes.Callvirt, prop_Value.GetGetMethod()),
                             new CodeInstruction(OpCodes.Conv_R4)
                         };
 
-                        // 先頭の命令を現在のスロットに置き換え、残りを後ろに挿入
                         codes[i] = newSeq[0];
                         codes.InsertRange(i + 1, newSeq.GetRange(1, newSeq.Count - 1));
-
-                        // シーケンスを飛び越えないように i を進める
                         i += newSeq.Count - 1;
+                        replacementCount++;
 
-                        SkillLimitExtenderPlugin.Logger?.LogDebug($"[SLE] GetSkillFactor: Replaced 100f with dynamic cap");
-                        break; // GetSkillFactorには100fが1個だけなので終了
+                        SkillLimitExtenderPlugin.Logger?.LogDebug($"[SLE] SkillsDialog: Replaced 100f #{replacementCount} with DefaultCap");
                     }
                 }
             }
 
+            SkillLimitExtenderPlugin.Logger?.LogInfo($"[SLE] SkillsDialog: Total 100f replacements: {replacementCount}");
             return codes;
         }
     }
