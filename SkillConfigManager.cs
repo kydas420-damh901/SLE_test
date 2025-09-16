@@ -24,7 +24,7 @@ namespace SkillLimitExtender
 
         internal static void ReloadFromYaml()
         {
-            _capsByName = SkillYamlExporter.LoadYaml();
+            _capsByName = YamlExporter.LoadYaml();
         }
 
         internal static int GetCap(global::Skills.SkillType st)

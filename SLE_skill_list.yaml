@@ -34,9 +34,5 @@ Farming: 250
 Fishing: 250
 WoodCutting: 250
 
-
-CustomSkillLimits:
 ### add MOD skills ###
-Magic: 250
-Firearms: 250
-Sailing: 250
+CustomSkillLimits:

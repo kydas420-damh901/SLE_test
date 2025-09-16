@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Reflection.Emit;
 using HarmonyLib;
 
@@ -9,7 +9,7 @@ namespace SkillLimitExtender
     /// これによりスキル効果の計算係数が拡張上限に対応する。
     /// </summary>
     [HarmonyPatch(typeof(global::Skills), nameof(global::Skills.GetSkillFactor))]
-    internal static class SLE_Hook_GetSkillFactor
+    internal static class SLE_Hook_SkillsDialog_LevelBars
     {
         [HarmonyTranspiler]
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
