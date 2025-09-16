@@ -1,6 +1,6 @@
-
 using System;
 using System.Collections.Generic;
+using HarmonyLib;
 using Jotunn.Managers;
 
 namespace SkillLimitExtender
@@ -46,7 +46,15 @@ namespace SkillLimitExtender
 
             for (int id = 0; id <= MAX_ID; id++)
             {
-                var def = global::Skills.GetSkillDef((global::Skills.SkillType)id);
+                global::Skills.SkillDef? def = null;
+                try
+                {
+                    var mi = AccessTools.Method(typeof(global::Skills), "GetSkillDef", new Type[] { typeof(global::Skills.SkillType) });
+                    if (mi != null)
+                        def = mi.Invoke(null, new object[] { (global::Skills.SkillType)id }) as global::Skills.SkillDef;
+                }
+                catch { /* ignore */ }
+
                 if (def == null) continue;
                 if (seen.Add(def.m_skill))
                     result.Add(def);

@@ -1,9 +1,9 @@
-
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using BepInEx; // Paths
+using HarmonyLib; // ★ 追加（private呼び出し用）
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -24,9 +24,17 @@ namespace SkillLimitExtender
             var seed = new Dictionary<string, int>();
             foreach (global::Skills.SkillType st in Enum.GetValues(typeof(global::Skills.SkillType)))
             {
-                var def = global::Skills.GetSkillDef(st);
+                global::Skills.SkillDef? def = null;
+                try
+                {
+                    var mi = AccessTools.Method(typeof(global::Skills), "GetSkillDef", new Type[] { typeof(global::Skills.SkillType) });
+                    if (mi != null)
+                        def = mi.Invoke(null, new object[] { st }) as global::Skills.SkillDef;
+                }
+                catch { /* ignore */ }
+
                 if (def == null) continue;
-                seed[st.ToString()] =  SkillConfigManager.DefaultCap?.Value ?? 250;
+                seed[st.ToString()] = SkillConfigManager.DefaultCap?.Value ?? 250;
             }
             SaveYaml(seed);
         }

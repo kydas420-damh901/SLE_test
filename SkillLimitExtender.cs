@@ -1,4 +1,3 @@
-
 using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
@@ -16,7 +15,7 @@ namespace SkillLimitExtender
         internal const string PluginName = "SkillLimitExtender";
         internal const string PluginVersion = "1.0.0";
 
-        internal static ManualLogSource Logger { get; private set; }
+        internal static ManualLogSource Logger { get; private set; } = null!; // ★ NRT抑止
         private readonly Harmony _harmony = new(PluginGuid);
 
         private void Awake()

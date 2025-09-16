@@ -1,20 +1,20 @@
-
+using HarmonyLib;
 using UnityEngine;
 
 namespace SkillLimitExtender
 {
     /// <summary>
-    /// ユーティリティ：スキルの現在値をcap内に収める
-    /// （既存の呼び出し先から使えるよう最低限を用意）
+    /// Skills.Skill.Raise の後段で cap クランプを適用
     /// </summary>
-    internal static class SLE_Skill_Raise
+    [HarmonyPatch(typeof(global::Skills.Skill), nameof(global::Skills.Skill.Raise))]
+    internal static class SLE_Skill_Raise_Patch
     {
-        internal static void ClampToCap(global::Skills skills, global::Skills.SkillType st)
+        [HarmonyPostfix]
+        private static void Postfix(global::Skills.Skill __instance)
         {
-            var s = skills.GetSkillSafe(st);
-            if (s == null) return;
-            int cap = SkillConfigManager.GetCap(st);
-            s.m_level = Mathf.Clamp(s.m_level, 0f, cap);
+            if (__instance == null || __instance.m_info == null) return;
+            int cap = SkillConfigManager.GetCap(__instance.m_info.m_skill);
+            __instance.m_level = Mathf.Clamp(__instance.m_level, 0f, cap);
         }
     }
 }

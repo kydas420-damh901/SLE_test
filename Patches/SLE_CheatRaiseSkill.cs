@@ -1,19 +1,25 @@
-
+using HarmonyLib;
 using UnityEngine;
 
 namespace SkillLimitExtender
 {
     /// <summary>
-    /// チート用途の簡易上昇ヘルパ（実際のコンソールコマンドは別実装を想定）
+    /// Skills.CheatRaiseSkill の後段で cap クランプを適用
     /// </summary>
-    internal static class SLE_CheatRaiseSkill
+    [HarmonyPatch(typeof(global::Skills), nameof(global::Skills.CheatRaiseSkill))]
+    internal static class SLE_CheatRaiseSkill_Patch
     {
-        internal static void AddLevel(global::Skills skills, global::Skills.SkillType st, float delta)
+        // 引数の skill 名はバニラ準拠。第二引数（value）があってもなくてもOK
+        [HarmonyPostfix]
+        private static void Postfix(global::Skills __instance, global::Skills.SkillType skill)
         {
-            var s = skills.GetSkillSafe(st);
-            if (s == null) return;
-            int cap = SkillConfigManager.GetCap(st);
-            s.m_level = Mathf.Clamp(s.m_level + delta, 0f, cap);
+            if (__instance == null) return;
+
+            var s = __instance.GetSkillSafe(skill);
+            if (s == null || s.m_info == null) return;
+
+            int cap = SkillConfigManager.GetCap(s.m_info.m_skill);
+            s.m_level = Mathf.Clamp(s.m_level, 0f, cap);
         }
     }
 }

@@ -1,4 +1,3 @@
-
 using System.Collections.Generic;
 using BepInEx.Configuration;
 
@@ -9,7 +8,7 @@ namespace SkillLimitExtender
     /// </summary>
     internal static class SkillConfigManager
     {
-        internal static ConfigEntry<int> DefaultCap; // YAML未定義時の既定上限
+        internal static ConfigEntry<int> DefaultCap = null!; // ★ NRT抑止（Initializeで必ず設定）
 
         private static Dictionary<string, int> _capsByName = new();
         private static bool _initialized;
@@ -38,7 +37,7 @@ namespace SkillLimitExtender
         // 互換API（既存呼び出し対策）
         internal static int GetSkillLimit(global::Skills.SkillType st) => GetCap(st);
 
-        // LateScan後に必要なら呼ぶ（ダミー。将来、他キャッシュがあればここで反映）
+        // 将来拡張用（今はno-op）
         internal static void ApplyCaps(System.Collections.Generic.IEnumerable<global::Skills.SkillDef> _all) { /* no-op */ }
     }
 }
