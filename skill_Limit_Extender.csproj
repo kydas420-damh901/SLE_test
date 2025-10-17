@@ -5,50 +5,53 @@
 		<Nullable>enable</Nullable>
 		<Deterministic>true</Deterministic>
 	</PropertyGroup>
+	<ItemGroup>
+	  <None Remove="prompt_SLE.txt" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<Reference Include="BepInEx">
-			<HintPath>lib\BepInEx.dll</HintPath>
+			<HintPath>D:\90_games\50_valheim_ori-mod\00_lib\BepInEx.dll</HintPath>
 			<Private>false</Private>
 		</Reference>
 		<Reference Include="0Harmony">
-			<HintPath>lib\0Harmony.dll</HintPath>
+			<HintPath>D:\90_games\50_valheim_ori-mod\00_lib\0Harmony.dll</HintPath>
 			<Private>false</Private>
 		</Reference>
 		<Reference Include="UnityEngine">
-			<HintPath>lib\UnityEngine.dll</HintPath>
+			<HintPath>D:\90_games\50_valheim_ori-mod\00_lib\UnityEngine.dll</HintPath>
 			<Private>false</Private>
 		</Reference>
 		<Reference Include="UnityEngine.CoreModule">
-			<HintPath>lib\UnityEngine.CoreModule.dll</HintPath>
+			<HintPath>D:\90_games\50_valheim_ori-mod\00_lib\UnityEngine.CoreModule.dll</HintPath>
 			<Private>false</Private>
 		</Reference>
 		<Reference Include="UnityEngine.UI">
-			<HintPath>lib\UnityEngine.UI.dll</HintPath>
+			<HintPath>D:\90_games\50_valheim_ori-mod\00_lib\UnityEngine.UI.dll</HintPath>
 			<Private>false</Private>
 		</Reference>
 		<Reference Include="YamlDotNet">
-			<HintPath>lib\YamlDotNet.dll</HintPath>
+			<HintPath>D:\90_games\50_valheim_ori-mod\00_lib\YamlDotNet.dll</HintPath>
 			<Private>false</Private>
 		</Reference>
 		<Reference Include="Assembly-CSharp">
-			<HintPath>lib\Assembly-CSharp.dll</HintPath>
+			<HintPath>D:\90_games\50_valheim_ori-mod\00_lib\Assembly-CSharp.dll</HintPath>
 			<Private>false</Private>
 		</Reference>
 		<Reference Include="assembly_valheim">
-			<HintPath>lib\assembly_valheim.dll</HintPath>
+			<HintPath>D:\90_games\50_valheim_ori-mod\00_lib\assembly_valheim.dll</HintPath>
 			<Private>false</Private>
 		</Reference>
 		<Reference Include="assembly_utils">
-			<HintPath>lib\assembly_utils.dll</HintPath>
+			<HintPath>D:\90_games\50_valheim_ori-mod\00_lib\assembly_utils.dll</HintPath>
 			<Private>false</Private>
 		</Reference>
 		<Reference Include="Jotunn">
-			<HintPath>Jotunn.dll</HintPath>
+			<HintPath>D:\90_games\50_valheim_ori-mod\00_lib\Jotunn.dll</HintPath>
 			<Private>false</Private>
 		</Reference>
 		<Reference Include="UnityEngine.UI">
-			<HintPath>lib\UnityEngine.UI.dll</HintPath>
+			<HintPath>D:\90_games\50_valheim_ori-mod\00_lib\UnityEngine.UI.dll</HintPath>
 			<Private>false</Private>
 		</Reference>
 	</ItemGroup>

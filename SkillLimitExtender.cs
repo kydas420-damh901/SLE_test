@@ -10,7 +10,7 @@ namespace SkillLimitExtender
     {
         internal const string PluginGuid = "SkillLimitExtender";
         internal const string PluginName = "SkillLimitExtender";
-        internal const string PluginVersion = "1.0.0";
+        internal const string PluginVersion = "1.0.1";
 
         internal new static ManualLogSource Logger { get; private set; } = null!;
         private readonly Harmony _harmony = new(PluginGuid);
@@ -21,12 +21,15 @@ namespace SkillLimitExtender
 
             try
             {
+                Logger.LogInfo($"[SLE] {VersionInfo.VersionString}");
                 // 設定とYAML初期化
                 SkillConfigManager.Initialize(Config);
                 YamlExporter.EnsureYamlExists();
 
                 // Harmonyパッチ適用
                 _harmony.PatchAll(typeof(SkillLimitExtenderPlugin).Assembly);
+                // コンソールコマンド登録（バージョン差異に依存しない安全な方式）
+                SLE_TerminalCommands.Register();
 
                 Logger.LogInfo($"[SLE] Plugin loaded successfully (v{PluginVersion})");
             }
@@ -43,7 +46,8 @@ namespace SkillLimitExtender
             {
                 try
                 {
-                    ZRoutedRpc.instance.Register<int, bool>("SLE_ConfigSync", SkillConfigManager.OnConfigReceivedStatic);
+                    // サーバーYAML全文を同期
+                    ZRoutedRpc.instance.Register<string, int>("SLE_YamlSync", SkillConfigManager.OnYamlReceivedStatic);
                     SkillLimitExtenderPlugin.Logger?.LogInfo("[SLE] RPC registered successfully");
                 }
                 catch (Exception e)
@@ -69,6 +73,7 @@ namespace SkillLimitExtender
     /// <summary>
     /// プレイヤーがワールドにスポーンした時にサーバー設定を送信
     /// </summary>
+    // SLE_Hook_PlayerSpawned.Postfix
     [HarmonyPatch(typeof(Player), nameof(Player.OnSpawned))]
     internal static class SLE_Hook_PlayerSpawned
     {
@@ -77,8 +82,8 @@ namespace SkillLimitExtender
         {
             if (ZNet.instance?.IsServer() == true && __instance != null)
             {
-                // プレイヤーがスポーンした時にサーバー設定を送信
-                SkillConfigManager.SendConfigToClients();
+                // プレイヤーがスポーンした時：内容が変わったときのみブロードキャスト
+                SkillConfigManager.SendConfigToClientsIfChanged();
             }
         }
     }

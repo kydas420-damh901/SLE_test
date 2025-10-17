@@ -6,7 +6,7 @@ using HarmonyLib;
 namespace SkillLimitExtender
 {
     /// <summary>
-    /// Skills から安全に Skill を取得（private API を反射でカバー）
+    /// Safely obtain a Skill from Skills (covers private API via reflection)
     /// </summary>
     internal static class SLE_SkillsExtensions
     {
@@ -20,7 +20,7 @@ namespace SkillLimitExtender
         {
             if (skills == null) return null;
 
-            // 1) private GetSkill(skillType) を反射で呼ぶ
+            // 1) Invoke private GetSkill(skillType) via reflection
             if (_miGetSkill != null)
             {
                 try
@@ -30,7 +30,7 @@ namespace SkillLimitExtender
                 catch { /* fallbackへ */ }
             }
 
-            // 2) m_skillData を直接読む（Dictionary<SkillType, Skill>）
+            // 2) Read m_skillData directly (Dictionary<SkillType, Skill>)
             if (_fiSkillData != null)
             {
                 try

@@ -6,5 +6,8 @@
 .vs/
 *.user
 *.suo
+*.yaml
+*.txt
+
 [Bb]in/
 [Oo]bj/

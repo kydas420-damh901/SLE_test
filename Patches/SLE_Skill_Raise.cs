@@ -6,8 +6,8 @@ using HarmonyLib;
 namespace SkillLimitExtender
 {
     /// <summary>
-    /// Skills.Skill.Raise 内の 100f ハードコードを、そのスキルの cap に置換する Transpiler。
-    /// これにより通常成長時も cap（YAML/設定）まで上昇可能になる。
+    /// Transpiler that replaces the 100f hardcode in Skills.Skill.Raise with the skill's cap.
+    /// This allows normal growth up to the cap (YAML/config).
     /// </summary>
     [HarmonyPatch(typeof(global::Skills.Skill), nameof(global::Skills.Skill.Raise))]
     internal static class SLE_Skill_Raise_Transpiler
@@ -16,23 +16,23 @@ namespace SkillLimitExtender
         {
             var codes = new List<CodeInstruction>(instructions);
 
-            // フィールドとメソッド参照を取得
+            // Acquire field and method references
             var fi_m_info = AccessTools.Field(typeof(global::Skills.Skill), "m_info");
             var fi_m_skill = AccessTools.Field(typeof(global::Skills.SkillDef), "m_skill");
             var mi_GetCap = AccessTools.Method(typeof(SkillConfigManager), nameof(SkillConfigManager.GetCap));
 
             if (fi_m_info == null || fi_m_skill == null || mi_GetCap == null)
-                return codes; // 安全策：何も置換できなければ元のILを返す
+                return codes; // Safety: return original IL if nothing can be replaced
 
-            // 置換ロジック：
-            //   ldc.r4 100.0 → （ldarg.0 → ldfld m_info → ldfld m_skill → call GetCap → conv.r4）
+            // Replacement logic:
+            //   ldc.r4 100.0 → (ldarg.0 → ldfld m_info → ldfld m_skill → call GetCap → conv.r4)
             for (int i = 0; i < codes.Count; i++)
             {
                 var instr = codes[i];
 
                 if (instr.opcode == OpCodes.Ldc_R4 && instr.operand is float f && System.Math.Abs(f - 100f) < 0.0001f)
                 {
-                    // 100f を cap に差し替える
+                    // Replace 100f with cap
                     // ldarg.0                         // this (Skills.Skill)
                     // ldfld     Skills.Skill::m_info
                     // ldfld     Skills.SkillDef::m_skill
@@ -47,11 +47,11 @@ namespace SkillLimitExtender
                         new CodeInstruction(OpCodes.Conv_R4)
                     };
 
-                    // 先頭の命令を現在のスロットに置き換え、残りを後ろに挿入
+                    // Replace current slot with the first instruction and insert the rest after
                     codes[i] = newSeq[0];
                     codes.InsertRange(i + 1, newSeq.GetRange(1, newSeq.Count - 1));
 
-                    // シーケンスを飛び越えないように i を進める
+                    // Advance i to avoid jumping over the inserted sequence
                     i += newSeq.Count - 1;
                 }
             }

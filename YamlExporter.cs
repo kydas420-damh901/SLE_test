@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -19,6 +19,13 @@ namespace SkillLimitExtender
 
         internal static string GetYamlPath() => YamlPath;
 
+        internal sealed class SkillYamlEntry
+        {
+            public int Cap { get; set; } = 250;
+            public int BonusCap { get; set; } = 100; // 100 = 1.0x
+            public bool Relative { get; set; } = false; // false = vanilla (level/100), true = relative (level/cap)
+        }
+
         /// <summary>
         /// 初回起動時にバニラスキルのみでYAMLファイル生成
         /// </summary>
@@ -26,48 +33,61 @@ namespace SkillLimitExtender
         {
             Directory.CreateDirectory(ConfigDir);
             if (File.Exists(YamlPath)) return;
-
-            var seed = new Dictionary<string, int>();
+            var seed = new Dictionary<string, SkillYamlEntry>();
             try
             {
                 foreach (global::Skills.SkillType st in Enum.GetValues(typeof(global::Skills.SkillType)))
                 {
                     if (st == global::Skills.SkillType.None || st == global::Skills.SkillType.All) continue;
-                    seed[st.ToString()] = SkillConfigManager.DefaultCap?.Value ?? 250;
+                    seed[st.ToString()] = new SkillYamlEntry { Cap = 250, BonusCap = 100, Relative = false };
                 }
             }
             catch { /* ignore */ }
 
-            SaveYaml(seed);
-            SkillLimitExtenderPlugin.Logger?.LogInfo($"[SLE] Created YAML: {YamlPath} (seed={seed.Count} vanilla skills)");
+            SaveYamlEntries(seed);
+            SkillLimitExtenderPlugin.Logger?.LogInfo($"[SLE] Created YAML: {YamlPath} (seed={seed.Count} vanilla skills, fields: cap/bonusCap/relative)");
         }
 
         /// <summary>
         /// YAMLファイル読み込み
         /// </summary>
-        internal static Dictionary<string, int> LoadYaml()
+        internal static Dictionary<string, SkillYamlEntry> LoadYamlEntries()
         {
             try
             {
-                if (!File.Exists(YamlPath)) return new Dictionary<string, int>();
+                if (!File.Exists(YamlPath)) return new Dictionary<string, SkillYamlEntry>();
                 var yaml = File.ReadAllText(YamlPath, new UTF8Encoding(false));
                 var deserializer = new DeserializerBuilder()
                     .WithNamingConvention(CamelCaseNamingConvention.Instance)
                     .IgnoreUnmatchedProperties()
                     .Build();
-                return deserializer.Deserialize<Dictionary<string, int>>(yaml) ?? new Dictionary<string, int>();
+                // 新形式（Entryオブジェクト）の読み込みを試し、失敗したら旧形式（int）にフォールバック
+                try
+                {
+                    var mapNew = deserializer.Deserialize<Dictionary<string, SkillYamlEntry>>(yaml);
+                    if (mapNew != null) return mapNew;
+                }
+                catch { /* fallback to old */ }
+
+                var mapOld = deserializer.Deserialize<Dictionary<string, int>>(yaml) ?? new Dictionary<string, int>();
+                var converted = new Dictionary<string, SkillYamlEntry>(StringComparer.Ordinal);
+                foreach (var kv in mapOld)
+                {
+                    converted[kv.Key] = new SkillYamlEntry { Cap = kv.Value, BonusCap = 100, Relative = false };
+                }
+                return converted;
             }
             catch (Exception e)
             {
                 SkillLimitExtenderPlugin.Logger?.LogError($"[SLE] LoadYaml error: {e}");
-                return new Dictionary<string, int>();
+                return new Dictionary<string, SkillYamlEntry>();
             }
         }
 
         /// <summary>
         /// YAMLファイル保存
         /// </summary>
-        internal static void SaveYaml(Dictionary<string, int> map)
+        internal static void SaveYamlEntries(Dictionary<string, SkillYamlEntry> map)
         {
             try
             {
