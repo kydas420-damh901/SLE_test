@@ -1,4 +1,5 @@
 using BepInEx;
+using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
 using System;
@@ -10,14 +11,21 @@ namespace SkillLimitExtender
     {
         internal const string PluginGuid = "SkillLimitExtender";
         internal const string PluginName = "SkillLimitExtender";
-        internal const string PluginVersion = "1.0.1";
+        internal const string PluginVersion = VersionInfo.Version;
 
         internal new static ManualLogSource Logger { get; private set; } = null!;
         private readonly Harmony _harmony = new(PluginGuid);
 
+        // Configuration Manager settings
+        internal static ConfigEntry<bool> EnableGrowthCurveDebug { get; private set; } = null!;
+
         private void Awake()
         {
             Logger = base.Logger;
+
+            // Configuration Manager settings
+            EnableGrowthCurveDebug = Config.Bind("Debug", "Enable Growth Curve Debug", false, 
+                "Enable debug logging for skill growth curve calculations");
 
             try
             {
@@ -28,6 +36,10 @@ namespace SkillLimitExtender
 
                 // Harmonyパッチ適用
                 _harmony.PatchAll(typeof(SkillLimitExtenderPlugin).Assembly);
+                
+                // MODスキル汎用パッチの初期化
+                SLE_Hook_ModSkills.Initialize(_harmony);
+                
                 // コンソールコマンド登録（バージョン差異に依存しない安全な方式）
                 SLE_TerminalCommands.Register();
 

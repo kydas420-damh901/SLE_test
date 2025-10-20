@@ -22,6 +22,10 @@ namespace SkillLimitExtender
                         args.Context.AddString("SLE: reloaded local YAML.");
                     }
                 }, true);
+                new Terminal.ConsoleCommand("sle_yaml_path", "Show current SLE YAML path", args =>
+                {
+                    args.Context.AddString($"SLE YAML path: {YamlExporter.GetYamlPath()}");
+                }, true);
             }
             catch (System.Exception e)
             {

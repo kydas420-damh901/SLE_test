@@ -6,6 +6,11 @@
 		<Deterministic>true</Deterministic>
 	</PropertyGroup>
 	<ItemGroup>
+	  <Compile Remove="dist\**" />
+	  <EmbeddedResource Remove="dist\**" />
+	  <None Remove="dist\**" />
+	</ItemGroup>
+	<ItemGroup>
 	  <None Remove="prompt_SLE.txt" />
 	</ItemGroup>
 
