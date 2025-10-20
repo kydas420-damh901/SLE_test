@@ -21,6 +21,7 @@ namespace SkillLimitExtender
 
             // Acquire required method references
             var mi_GetCap = AccessTools.Method(typeof(SkillConfigManager), nameof(SkillConfigManager.GetCap));
+            var mi_GetCapByName = AccessTools.Method(typeof(SkillConfigManager), nameof(SkillConfigManager.GetCapByName));
             var fi_m_info = AccessTools.Field(typeof(global::Skills.Skill), "m_info");
             var fi_m_skill = AccessTools.Field(typeof(global::Skills.SkillDef), "m_skill");
 
@@ -32,10 +33,8 @@ namespace SkillLimitExtender
             {
                 var instr = codes[i];
 
-                // Find and replace 'ldc.r4 100.0'
                 if (instr.opcode == OpCodes.Ldc_R4 && instr.operand is float f && Math.Abs(f - 100f) < 0.0001f)
                 {
-                    // Check if this is clamp context (inspect surrounding instructions)
                     bool isClampContext = false;
                     for (int j = Math.Max(0, i - 5); j < Math.Min(codes.Count, i + 5); j++)
                     {
@@ -47,17 +46,20 @@ namespace SkillLimitExtender
                         }
                     }
 
-                    if (isClampContext)
+                    if (isClampContext && mi_GetCapByName != null)
                     {
-                        // Safer implementation: use global UI denominator (fallback: 250)
-                        var mi_GetUiDenominator = AccessTools.Method(typeof(SkillConfigManager), nameof(SkillConfigManager.GetUiDenominator));
-                        if (mi_GetUiDenominator != null)
+                        // Replace '100f' with GetCapByName(name)
+                        var newSeq = new List<CodeInstruction>
                         {
-                            var newInstr = new CodeInstruction(OpCodes.Call, mi_GetUiDenominator);
-                            codes[i] = newInstr;
-                            SkillLimitExtenderPlugin.Logger?.LogDebug("[SLE] CheatRaiseSkill: Replaced 100f with GetUiDenominator()");
-                            break; // replace only one occurrence
-                        }
+                            new CodeInstruction(OpCodes.Ldarg_1),                 // name
+                            new CodeInstruction(OpCodes.Call, mi_GetCapByName),   // int cap
+                            new CodeInstruction(OpCodes.Conv_R4)                  // float cap
+                        };
+
+                        codes[i] = newSeq[0];
+                        codes.InsertRange(i + 1, newSeq.GetRange(1, newSeq.Count - 1));
+                        SkillLimitExtenderPlugin.Logger?.LogDebug("[SLE] CheatRaiseSkill: Replaced 100f with GetCapByName(name)");
+                        break; // replace only one occurrence
                     }
                 }
             }

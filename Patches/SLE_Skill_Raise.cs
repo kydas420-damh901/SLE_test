@@ -59,4 +59,109 @@ namespace SkillLimitExtender
             return codes;
         }
     }
+
+    /// <summary>
+    /// Patch for Skills.Skill.GetLevelPercentage to customize growth curves
+    /// We patch GetLevelPercentage instead of GetNextLevelRequirement because GetNextLevelRequirement is private
+    /// </summary>
+    [HarmonyPatch(typeof(global::Skills.Skill), nameof(global::Skills.Skill.GetLevelPercentage))]
+    internal static class SLE_Skill_GetLevelPercentage_Patch
+    {
+        [HarmonyPrefix]
+        private static bool Prefix(global::Skills.Skill __instance, ref float __result)
+        {
+            try
+            {
+                // Get skill type first to check actual cap
+                var info = HarmonyLib.Traverse.Create(__instance).Field("m_info").GetValue<global::Skills.SkillDef>();
+                if (info == null) return true; // Fall back to vanilla
+
+                var skillType = HarmonyLib.Traverse.Create(info).Field("m_skill").GetValue<global::Skills.SkillType>();
+                int skillCap = SkillConfigManager.GetCap(skillType);
+                
+                // Check if level is at actual cap (not hardcoded 100)
+                if (__instance.m_level >= skillCap)
+                {
+                    __result = 0f;
+                    return false;
+                }
+
+                // Calculate next level requirement using our custom logic
+                float nextLevelRequirement = CalculateNextLevelRequirement(__instance, skillType);
+                
+                // Calculate percentage
+                __result = UnityEngine.Mathf.Clamp01(__instance.m_accumulator / nextLevelRequirement);
+                
+                return false; // Skip vanilla implementation
+            }
+            catch (System.Exception ex)
+            {
+                if (SkillLimitExtenderPlugin.EnableGrowthCurveDebug.Value)
+                {
+                    SkillLimitExtenderPlugin.Logger?.LogError($"[SLE Growth Curve] Error in GetLevelPercentage patch: {ex.Message}");
+                }
+                return true; // Fall back to vanilla on error
+            }
+        }
+
+        private static float CalculateNextLevelRequirement(global::Skills.Skill skill, global::Skills.SkillType skillType)
+        {
+            try
+            {
+                // Check if custom growth curve is enabled for this skill
+                bool useCustomCurve = SkillConfigManager.UseCustomGrowthCurve(skillType);
+                
+                float level = skill.m_level;
+                float result;
+                
+                if (!useCustomCurve)
+                {
+                    // Use vanilla calculation: Mathf.Pow(Mathf.Floor(level + 1f), 1.5f) * 0.5f + 0.5f
+                    result = UnityEngine.Mathf.Pow(UnityEngine.Mathf.Floor(level + 1f), 1.5f) * 0.5f + 0.5f;
+                    
+                    // Debug logging if enabled
+                    if (SkillLimitExtenderPlugin.EnableGrowthCurveDebug.Value)
+                    {
+                        SkillLimitExtenderPlugin.Logger?.LogInfo(
+                            $"[SLE Growth Curve] Skill: {skillType}, Level: {level:F1}, " +
+                            $"Mode: Vanilla, Result: {result:F2}"
+                        );
+                    }
+                }
+                else
+                {
+                    // Get custom growth curve parameters
+                    float exponent = SkillConfigManager.GetGrowthExponent(skillType);
+                    float multiplier = SkillConfigManager.GetGrowthMultiplier(skillType);
+                    float constant = SkillConfigManager.GetGrowthConstant(skillType);
+                    
+                    // Calculate custom growth curve: multiplier * (level + constant) ^ exponent
+                    result = multiplier * UnityEngine.Mathf.Pow(level + constant, exponent);
+                    
+                    // Debug logging if enabled
+                    if (SkillLimitExtenderPlugin.EnableGrowthCurveDebug.Value)
+                    {
+                        float vanillaResult = UnityEngine.Mathf.Pow(UnityEngine.Mathf.Floor(level + 1f), 1.5f) * 0.5f + 0.5f;
+                        SkillLimitExtenderPlugin.Logger?.LogInfo(
+                            $"[SLE Growth Curve] Skill: {skillType}, Level: {level:F1}, " +
+                            $"Mode: Custom, Params: exp={exponent:F2}, mult={multiplier:F2}, const={constant:F2}, " +
+                            $"Vanilla: {vanillaResult:F2}, Custom: {result:F2}"
+                        );
+                    }
+                }
+                
+                return result;
+            }
+            catch (System.Exception ex)
+            {
+                if (SkillLimitExtenderPlugin.EnableGrowthCurveDebug.Value)
+                {
+                    SkillLimitExtenderPlugin.Logger?.LogError($"[SLE Growth Curve] Error in CalculateNextLevelRequirement: {ex.Message}");
+                }
+                // Fall back to vanilla calculation on error
+                float level = skill.m_level;
+                return UnityEngine.Mathf.Pow(UnityEngine.Mathf.Floor(level + 1f), 1.5f) * 0.5f + 0.5f;
+            }
+        }
+    }
 }

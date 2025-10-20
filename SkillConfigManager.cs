@@ -136,7 +136,40 @@ namespace SkillLimitExtender
             string skillKey = st.ToString();
             if (_entriesByName != null && _entriesByName.TryGetValue(skillKey, out var entry) && entry != null)
                 return entry.Relative;
-            return false;
+            return true; // Default to relative scaling
+        }
+
+        // Growth curve parameters
+        internal static float GetGrowthExponent(global::Skills.SkillType st)
+        {
+            string skillKey = st.ToString();
+            if (_entriesByName != null && _entriesByName.TryGetValue(skillKey, out var entry) && entry != null)
+                return entry.GrowthExponent;
+            return 1.5f; // Vanilla default
+        }
+
+        internal static float GetGrowthMultiplier(global::Skills.SkillType st)
+        {
+            string skillKey = st.ToString();
+            if (_entriesByName != null && _entriesByName.TryGetValue(skillKey, out var entry) && entry != null)
+                return entry.GrowthMultiplier;
+            return 0.5f; // Vanilla default
+        }
+
+        internal static float GetGrowthConstant(global::Skills.SkillType st)
+        {
+            string skillKey = st.ToString();
+            if (_entriesByName != null && _entriesByName.TryGetValue(skillKey, out var entry) && entry != null)
+                return entry.GrowthConstant;
+            return 0.5f; // Vanilla default
+        }
+
+        internal static bool UseCustomGrowthCurve(global::Skills.SkillType st)
+        {
+            string skillKey = st.ToString();
+            if (_entriesByName != null && _entriesByName.TryGetValue(skillKey, out var entry) && entry != null)
+                return entry.UseCustomGrowthCurve;
+            return false; // Default: use vanilla curve
         }
 
         // UI denominator (global/per-skill)
@@ -145,6 +178,7 @@ namespace SkillLimitExtender
         internal static float GetUiDenominatorForSkill(global::Skills.SkillType st) => Math.Max(1, GetCap(st));
 
         // Added: safe helper to obtain per-skill UI denominator
+        // Special handling: always use the same denominator for both levelbar and levelbar_total
         internal static float GetUiDenominatorForSkillSafe(object? skillMaybe)
         {
             try
@@ -156,15 +190,19 @@ namespace SkillLimitExtender
                     if (info != null)
                     {
                         var st = HarmonyLib.Traverse.Create(info).Field("m_skill").GetValue<global::Skills.SkillType>();
-                        return GetUiDenominatorForSkill(st);
+                        float result = GetUiDenominatorForSkill(st);
+                        SkillLimitExtenderPlugin.Logger?.LogDebug($"[SLE] UI denominator for {st}: {result} (level={s.m_level})");
+                        return result;
                     }
                 }
             }
-            catch
+            catch (System.Exception e)
             {
-                // ignore and fallback
+                SkillLimitExtenderPlugin.Logger?.LogWarning($"[SLE] GetUiDenominatorForSkillSafe failed: {e.Message}");
             }
-            return GetUiDenominator();
+            float fallback = GetUiDenominator();
+            SkillLimitExtenderPlugin.Logger?.LogDebug($"[SLE] UI denominator fallback: {fallback}");
+            return fallback;
         }
 
         // Server → client: send full YAML
@@ -227,6 +265,7 @@ namespace SkillLimitExtender
                 if (!VersionInfo.IsCompatible(protocolVersion))
                 {
                     SkillLimitExtenderPlugin.Logger?.LogWarning($"[SLE] Protocol version mismatch: remote={protocolVersion}, local={VersionInfo.ProtocolVersion}");
+                    return; // Mismatch: do not apply YAML
                 }
 
                 if (!string.IsNullOrEmpty(yamlContent))
@@ -240,16 +279,30 @@ namespace SkillLimitExtender
                         var map = deserializer.Deserialize<Dictionary<string, YamlExporter.SkillYamlEntry>>(yamlContent);
                         _entriesByName = map ?? new Dictionary<string, YamlExporter.SkillYamlEntry>(StringComparer.Ordinal);
                     }
-                    catch
+                    catch (YamlDotNet.Core.YamlException yamlEx)
                     {
+                        SkillLimitExtenderPlugin.Logger?.LogWarning($"[SLE] YAML parsing failed, trying legacy format: {yamlEx.Message}");
                         // Fallback to legacy format (int)
                         var mapOld = deserializer.Deserialize<Dictionary<string, int>>(yamlContent) ?? new Dictionary<string, int>();
                         var converted = new Dictionary<string, YamlExporter.SkillYamlEntry>(StringComparer.Ordinal);
                         foreach (var kv in mapOld)
                         {
-                            converted[kv.Key] = new YamlExporter.SkillYamlEntry { Cap = kv.Value, BonusCap = DefaultBonusCapFallback, Relative = false };
+                            converted[kv.Key] = new YamlExporter.SkillYamlEntry { 
+                    Cap = kv.Value, 
+                    BonusCap = DefaultBonusCapFallback, 
+                    Relative = true,
+                    UseCustomGrowthCurve = false,
+                    GrowthExponent = 1.5f,
+                    GrowthMultiplier = 0.5f,
+                    GrowthConstant = 0.5f
+                };
                         }
                         _entriesByName = converted;
+                    }
+                    catch (System.Exception parseEx)
+                    {
+                        SkillLimitExtenderPlugin.Logger?.LogError($"[SLE] Failed to parse server YAML: {parseEx}");
+                        _entriesByName = new Dictionary<string, YamlExporter.SkillYamlEntry>(StringComparer.Ordinal);
                     }
                 }
                 else
@@ -262,6 +315,8 @@ namespace SkillLimitExtender
             catch (System.Exception e)
             {
                 SkillLimitExtenderPlugin.Logger?.LogError($"[SLE] Failed to apply server YAML: {e}");
+                // Ensure we have a valid state even on error
+                _entriesByName = new Dictionary<string, YamlExporter.SkillYamlEntry>(StringComparer.Ordinal);
             }
         }
 
@@ -269,6 +324,19 @@ namespace SkillLimitExtender
         internal static void OnPlayerConnected()
         {
             SendConfigToClients();
+        }
+
+        // Compatibility API
+        internal static int GetCapByName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return DefaultCapFallback;
+            if (Enum.TryParse<global::Skills.SkillType>(name, true, out var st) &&
+                st != global::Skills.SkillType.None &&
+                st != global::Skills.SkillType.All)
+            {
+                return GetCap(st);
+            }
+            return DefaultCapFallback;
         }
 
         // Compatibility API

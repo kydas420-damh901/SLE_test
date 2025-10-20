@@ -14,7 +14,7 @@ namespace SkillLimitExtender
         private static readonly string ConfigDir =
             Path.Combine(Paths.ConfigPath, "SkillLimitExtender");
 
-        private static readonly string YamlPath =
+        private static string YamlPath =
             Path.Combine(ConfigDir, "SLE_Skill_List.yaml");
 
         internal static string GetYamlPath() => YamlPath;
@@ -23,7 +23,11 @@ namespace SkillLimitExtender
         {
             public int Cap { get; set; } = 250;
             public int BonusCap { get; set; } = 100; // 100 = 1.0x
-            public bool Relative { get; set; } = false; // false = vanilla (level/100), true = relative (level/cap)
+            public bool Relative { get; set; } = true; // true = relative (level/cap), false = vanilla (level/100)
+            public bool UseCustomGrowthCurve { get; set; } = false; // true = custom curve, false = vanilla curve
+            public float GrowthExponent { get; set; } = 1.5f; // Growth curve exponent (vanilla: 1.5)
+            public float GrowthMultiplier { get; set; } = 0.5f; // Growth curve multiplier (vanilla: 0.5)
+            public float GrowthConstant { get; set; } = 0.5f; // Growth curve constant (vanilla: 0.5)
         }
 
         /// <summary>
@@ -39,7 +43,15 @@ namespace SkillLimitExtender
                 foreach (global::Skills.SkillType st in Enum.GetValues(typeof(global::Skills.SkillType)))
                 {
                     if (st == global::Skills.SkillType.None || st == global::Skills.SkillType.All) continue;
-                    seed[st.ToString()] = new SkillYamlEntry { Cap = 250, BonusCap = 100, Relative = false };
+                    seed[st.ToString()] = new SkillYamlEntry { 
+                        Cap = 250, 
+                        BonusCap = 100, 
+                        Relative = true,
+                        UseCustomGrowthCurve = false,
+                        GrowthExponent = 1.5f,
+                        GrowthMultiplier = 0.5f,
+                        GrowthConstant = 0.5f
+                    };
                 }
             }
             catch { /* ignore */ }
@@ -73,7 +85,15 @@ namespace SkillLimitExtender
                 var converted = new Dictionary<string, SkillYamlEntry>(StringComparer.Ordinal);
                 foreach (var kv in mapOld)
                 {
-                    converted[kv.Key] = new SkillYamlEntry { Cap = kv.Value, BonusCap = 100, Relative = false };
+                    converted[kv.Key] = new SkillYamlEntry { 
+                        Cap = kv.Value, 
+                        BonusCap = 100, 
+                        Relative = true,
+                        UseCustomGrowthCurve = false,
+                        GrowthExponent = 1.5f,
+                        GrowthMultiplier = 0.5f,
+                        GrowthConstant = 0.5f
+                    };
                 }
                 return converted;
             }
@@ -99,11 +119,54 @@ namespace SkillLimitExtender
                     map.OrderBy(kv => kv.Key, StringComparer.Ordinal)
                        .ToDictionary(kv => kv.Key, kv => kv.Value)
                 );
-                File.WriteAllText(YamlPath, yaml, new UTF8Encoding(false));
+
+                // 原子書き込み（失敗時はフォールバックへ）
+                if (!TryWriteAllText(YamlPath, yaml, new UTF8Encoding(false), out var err))
+                {
+                    var fallbackDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SkillLimitExtender");
+                    var fallbackPath = Path.Combine(fallbackDir, "SLE_Skill_List.yaml");
+                    Directory.CreateDirectory(fallbackDir);
+                    File.WriteAllText(fallbackPath, yaml, new UTF8Encoding(false));
+                    // 読み込み先もフォールバックへ切替
+                    YamlPath = fallbackPath;
+                    SkillLimitExtenderPlugin.Logger?.LogWarning($"[SLE] SaveYaml primary failed: {err?.GetType().Name} {err?.Message}; switched to fallback: {fallbackPath}");
+                }
             }
             catch (Exception e)
             {
                 SkillLimitExtenderPlugin.Logger?.LogError($"[SLE] SaveYaml error: {e}");
+            }
+        }
+
+        // 原子書き込み＋クリーンアップ（内部ユーティリティ）
+        private static bool TryWriteAllText(string path, string contents, Encoding encoding, out Exception? error)
+        {
+            error = null;
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                var tmp = path + ".tmp";
+                File.WriteAllText(tmp, contents, encoding);
+                if (File.Exists(path))
+                {
+                    File.Replace(tmp, path, null);
+                }
+                else
+                {
+                    File.Move(tmp, path);
+                }
+                return true;
+            }
+            catch (Exception e)
+            {
+                error = e;
+                try
+                {
+                    var tmp = path + ".tmp";
+                    if (File.Exists(tmp)) File.Delete(tmp);
+                }
+                catch { /* ignore */ }
+                return false;
             }
         }
     }

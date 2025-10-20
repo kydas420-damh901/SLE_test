@@ -1,9 +1,0 @@
-{
-  "name": "SkillLimitExtender",
-  "version_number": "1.1.0",
-  "description": "Extend skill caps and bonus multipliers via YAML, with server sync and optional relative scaling. Includes 'sle_yaml_reload' console command.",
-    "website_url": "https://github.com/kydas420-damh901/Skill-Limit-Extender",
-  "dependencies": [
-    "denikson-BepInExPack_Valheim-5.4.23.3"
-  ]
-}
