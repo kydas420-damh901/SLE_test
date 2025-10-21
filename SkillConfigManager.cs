@@ -422,6 +422,39 @@ namespace SkillLimitExtender
             return false; // Default: use vanilla curve
         }
 
+        // Growth curve parameters
+        internal static float GetGrowthExponent(global::Skills.SkillType st)
+        {
+            string skillKey = st.ToString();
+            if (_entriesByName != null && _entriesByName.TryGetValue(skillKey, out var entry) && entry != null)
+                return entry.GrowthExponent;
+            return 1.5f; // Vanilla default
+        }
+
+        internal static float GetGrowthMultiplier(global::Skills.SkillType st)
+        {
+            string skillKey = st.ToString();
+            if (_entriesByName != null && _entriesByName.TryGetValue(skillKey, out var entry) && entry != null)
+                return entry.GrowthMultiplier;
+            return 0.5f; // Vanilla default
+        }
+
+        internal static float GetGrowthConstant(global::Skills.SkillType st)
+        {
+            string skillKey = st.ToString();
+            if (_entriesByName != null && _entriesByName.TryGetValue(skillKey, out var entry) && entry != null)
+                return entry.GrowthConstant;
+            return 0.5f; // Vanilla default
+        }
+
+        internal static bool UseCustomGrowthCurve(global::Skills.SkillType st)
+        {
+            string skillKey = st.ToString();
+            if (_entriesByName != null && _entriesByName.TryGetValue(skillKey, out var entry) && entry != null)
+                return entry.UseCustomGrowthCurve;
+            return false; // Default: use vanilla curve
+        }
+
         // UI denominator (global/per-skill)
         internal static float GetFactorDenominator(global::Skills.SkillType st) => 100f; // Vanilla behavior
         internal static float GetUiDenominator() 
